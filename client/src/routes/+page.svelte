@@ -2,6 +2,7 @@
 	import { game } from '$lib/stores/game.svelte.js';
 	import Login from '$lib/components/Login.svelte';
 	import Lobby from '$lib/components/Lobby.svelte';
+	import Game from '$lib/components/Game.svelte';
 
 	const screen = $derived(
 		game.connection !== 'connected'
@@ -20,6 +21,8 @@
 	<Login />
 {:else if screen === 'lobby'}
 	<Lobby />
+{:else if screen === 'game'}
+	<Game />
 {:else}
 	<div class="loading">Loading…</div>
 {/if}
