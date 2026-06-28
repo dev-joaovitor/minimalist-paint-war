@@ -74,7 +74,12 @@ function dispatch(msg) {
 	const { type, data } = msg;
 	switch (type) {
 		case 'joined':
-			game.me = data;
+			game.me = {
+				id: data.userId,
+				username: data.username,
+				role: data.role,
+				team: data.team
+			};
 			game.error = null;
 			break;
 
