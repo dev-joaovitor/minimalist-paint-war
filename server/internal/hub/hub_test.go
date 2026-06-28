@@ -45,7 +45,7 @@ func TestBalanceTeamsAlternates(t *testing.T) {
 
 func startHub(t *testing.T) string {
 	t.Helper()
-	h := New()
+	h := New(120000)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", ws.NewHandler(h))
 	srv := httptest.NewServer(mux)

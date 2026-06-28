@@ -1,8 +1,12 @@
 package hub
 
 import (
+	"encoding/json"
 	"log"
+	"time"
 
+	"paintwar/server/internal/game"
+	"paintwar/server/internal/mapgen"
 	"paintwar/server/internal/model"
 	"paintwar/server/internal/ws"
 )
@@ -16,23 +20,29 @@ type member struct {
 	team   model.Team
 }
 
-// Hub is the single owner of all room state. Exactly one goroutine (Run) reads
-// and mutates its fields; everything else communicates via the commands channel.
-// It implements ws.Registrar.
+// Hub is the single owner of all room state. Exactly one goroutine (run) reads
+// and mutates its fields; everything else communicates via the commands channel
+// or the tick timer. It implements ws.Registrar.
 type Hub struct {
 	commands chan command
+	matchMs  int64
 
 	state      model.RoomState
 	members    []*member          // ordered by join time; members[0] is the leader
 	byUsername map[string]*member // active usernames -> member
 
+	world  *game.World
+	curMap game.MapData
+	endsAt int64
+
 	leaderboard []ws.LeaderEntry // cached; populated in milestone 7
 }
 
 // New creates a hub in the LOBBY state and starts its goroutine.
-func New() *Hub {
+func New(matchMs int64) *Hub {
 	h := &Hub{
 		commands:   make(chan command, commandBuffer),
+		matchMs:    matchMs,
 		state:      model.StateLobby,
 		byUsername: make(map[string]*member),
 	}
@@ -40,48 +50,53 @@ func New() *Hub {
 	return h
 }
 
-// run is the single-owner command loop.
+// run is the single-owner loop: it serializes commands and tick processing.
 func (h *Hub) run() {
-	for cmd := range h.commands {
-		switch c := cmd.(type) {
-		case registerCmd:
-			c.reply <- h.handleRegister(c.client)
-		case unregisterCmd:
-			h.handleUnregister(c.client)
-		case messageCmd:
-			h.handleMessage(c.client, c.env)
+	ticker := time.NewTicker(time.Second / game.TickHz)
+	defer ticker.Stop()
+	for {
+		select {
+		case cmd := <-h.commands:
+			switch c := cmd.(type) {
+			case registerCmd:
+				c.reply <- h.handleRegister(c.client)
+			case unregisterCmd:
+				h.handleUnregister(c.client)
+			case messageCmd:
+				h.handleMessage(c.client, c.env)
+			}
+		case <-ticker.C:
+			h.tick()
 		}
 	}
 }
 
+func nowMs() int64 { return time.Now().UnixMilli() }
+
 // --- ws.Registrar implementation (called from connection goroutines) ---
 
-// Register blocks until the hub goroutine decides whether to admit the client.
 func (h *Hub) Register(c *ws.Client) error {
 	reply := make(chan error, 1)
 	h.commands <- registerCmd{client: c, reply: reply}
 	return <-reply
 }
 
-// Unregister enqueues removal; it returns immediately.
-func (h *Hub) Unregister(c *ws.Client) {
-	h.commands <- unregisterCmd{client: c}
-}
+func (h *Hub) Unregister(c *ws.Client) { h.commands <- unregisterCmd{client: c} }
 
-// HandleMessage enqueues a decoded message; it returns immediately.
 func (h *Hub) HandleMessage(c *ws.Client, env ws.Envelope) {
 	h.commands <- messageCmd{client: c, env: env}
 }
 
-// --- command handlers (run on the hub goroutine only) ---
+// --- command handlers (hub goroutine only) ---
 
 func (h *Hub) handleRegister(c *ws.Client) error {
 	if _, exists := h.byUsername[c.Username]; exists {
 		return ws.ErrUsernameTaken
 	}
 
+	playing := h.state == model.StatePlaying
 	role := model.RoleLobbyPlayer
-	if h.state == model.StatePlaying {
+	if playing {
 		role = model.RoleSpectator
 	}
 
@@ -89,31 +104,29 @@ func (h *Hub) handleRegister(c *ws.Client) error {
 	h.members = append(h.members, m)
 	h.byUsername[c.Username] = m
 
-	if role == model.RoleSpectator {
-		c.SendMsg(ws.TypeYouAreSpectator, nil)
-	} else {
-		h.balanceTeams()
-	}
-
 	c.SendMsg(ws.TypeJoined, ws.JoinedData{
-		UserID:   c.ID,
-		Username: c.Username,
-		Role:     string(m.role),
-		Team:     string(m.team),
+		UserID: c.ID, Username: c.Username, Role: string(role), Team: string(m.team),
 	})
 
 	if h.leaderID() == c.ID {
 		c.SendMsg(ws.TypeYouAreLeader, nil)
 	}
 
-	h.broadcastLobbyState()
+	if playing {
+		// Late joiner spectates the match in progress.
+		c.SendMsg(ws.TypeYouAreSpectator, nil)
+		c.SendMsg(ws.TypeMatchStart, matchStartData{Map: h.curMap, EndsAt: h.endsAt})
+	} else {
+		h.balanceTeams()
+		h.broadcastLobbyState()
+	}
 	return nil
 }
 
 func (h *Hub) handleUnregister(c *ws.Client) {
 	m, ok := h.byUsername[c.Username]
 	if !ok || m.client != c {
-		return // already replaced or never registered
+		return
 	}
 
 	prevLeader := h.leaderID()
@@ -124,32 +137,113 @@ func (h *Hub) handleUnregister(c *ws.Client) {
 			break
 		}
 	}
-
-	h.balanceTeams()
-
-	// Notify a newly promoted leader.
-	if newLeader := h.leaderID(); newLeader != "" && newLeader != prevLeader {
-		if lm := h.members[0]; lm.role != model.RoleSpectator {
-			lm.client.SendMsg(ws.TypeYouAreLeader, nil)
-		}
+	if h.world != nil {
+		h.world.RemovePlayer(c.ID)
 	}
 
-	h.broadcastLobbyState()
+	// Promote a new leader if needed.
+	if newLeader := h.leaderID(); newLeader != "" && newLeader != prevLeader {
+		h.members[0].client.SendMsg(ws.TypeYouAreLeader, nil)
+	}
+
+	if h.state == model.StateLobby {
+		h.balanceTeams()
+		h.broadcastLobbyState()
+	}
 }
 
 func (h *Hub) handleMessage(c *ws.Client, env ws.Envelope) {
 	switch env.Type {
 	case ws.TypePing:
 		c.SendMsg(ws.TypePong, env.Data)
+
 	case ws.TypeStartGame:
-		// Validated and wired in milestone 5.
-		if h.leaderID() != c.ID {
-			c.SendMsg(ws.TypeError, ws.ErrorData{Code: ws.ErrNotLeader, Message: "only the leader can start"})
+		h.handleStartGame(c)
+
+	case ws.TypeInput:
+		if h.state != model.StatePlaying || h.world == nil {
+			return
 		}
+		m := h.byUsername[c.Username]
+		if m == nil || m.role != model.RolePlayer {
+			return
+		}
+		var in ws.InputData
+		if json.Unmarshal(env.Data, &in) != nil {
+			return
+		}
+		h.world.SetInput(c.ID, game.Input{
+			DX: clampDir(in.DX), DY: clampDir(in.DY), Shoot: in.Shoot,
+		})
 	}
 }
 
-// leaderID returns the id of the current leader (first member), or "".
+func (h *Hub) handleStartGame(c *ws.Client) {
+	if h.leaderID() != c.ID {
+		c.SendMsg(ws.TypeError, ws.ErrorData{Code: ws.ErrNotLeader, Message: "only the leader can start"})
+		return
+	}
+	if h.state != model.StateLobby {
+		return
+	}
+	if h.lobbyPlayerCount() < minPlayers {
+		c.SendMsg(ws.TypeError, ws.ErrorData{Code: ws.ErrNotEnoughPlayers, Message: "need at least 2 players"})
+		return
+	}
+	h.startMatch()
+}
+
+// --- match lifecycle ---
+
+func (h *Hub) startMatch() {
+	h.balanceTeams() // freeze balanced teams for the match
+
+	specs := make([]game.PlayerSpec, 0, len(h.members))
+	for _, m := range h.members {
+		if m.role == model.RoleSpectator {
+			continue
+		}
+		m.role = model.RolePlayer
+		specs = append(specs, game.PlayerSpec{ID: m.client.ID, Team: m.team})
+	}
+
+	seed := time.Now().UnixNano()
+	h.curMap = mapgen.Generate(seed)
+	start := nowMs()
+	h.endsAt = start + h.matchMs
+	h.world = game.NewWorld(h.curMap, specs, start, h.matchMs)
+	h.state = model.StatePlaying
+
+	h.broadcastMsg(ws.TypeMatchStart, matchStartData{Map: h.curMap, EndsAt: h.endsAt})
+}
+
+// endMatch returns to the lobby. Milestone 6 inserts the scoreboard phase and
+// persistence ahead of this.
+func (h *Hub) endMatch() {
+	h.state = model.StateLobby
+	h.world = nil
+	for _, m := range h.members {
+		m.role = model.RoleLobbyPlayer
+	}
+	h.balanceTeams()
+	h.broadcastLobbyState()
+}
+
+func (h *Hub) tick() {
+	if h.state != model.StatePlaying || h.world == nil {
+		return
+	}
+	now := nowMs()
+	h.world.Step(now)
+	if h.world.Ended(now) {
+		h.endMatch()
+		return
+	}
+	h.broadcastMsg(ws.TypeState, h.world.Snapshot(now))
+}
+
+// --- helpers ---
+
 func (h *Hub) leaderID() string {
 	if len(h.members) == 0 {
 		return ""
@@ -157,28 +251,45 @@ func (h *Hub) leaderID() string {
 	return h.members[0].client.ID
 }
 
-// broadcastLobbyState sends the current roster + leader + leaderboard to all.
 func (h *Hub) broadcastLobbyState() {
 	players := make([]ws.LobbyPlayer, 0, len(h.members))
 	for _, m := range h.members {
 		players = append(players, ws.LobbyPlayer{
-			ID:       m.client.ID,
-			Username: m.client.Username,
-			Team:     string(m.team),
-			Role:     string(m.role),
+			ID: m.client.ID, Username: m.client.Username,
+			Team: string(m.team), Role: string(m.role),
 		})
 	}
-	data := ws.LobbyStateData{
-		LeaderID:    h.leaderID(),
-		Players:     players,
-		Leaderboard: h.leaderboard,
-	}
-	b, err := ws.Encode(ws.TypeLobbyState, data)
+	h.broadcastMsg(ws.TypeLobbyState, ws.LobbyStateData{
+		LeaderID: h.leaderID(), Players: players, Leaderboard: h.leaderboard,
+	})
+}
+
+// broadcastMsg encodes once and sends to every member.
+func (h *Hub) broadcastMsg(msgType string, data any) {
+	b, err := ws.Encode(msgType, data)
 	if err != nil {
-		log.Printf("lobby_state encode: %v", err)
+		log.Printf("%s encode: %v", msgType, err)
 		return
 	}
 	for _, m := range h.members {
 		m.client.Send(b)
+	}
+}
+
+// matchStartData is the match_start payload (static map + match end time).
+type matchStartData struct {
+	Map    game.MapData `json:"map"`
+	EndsAt int64        `json:"endsAt"`
+}
+
+// clampDir constrains a direction component to {-1, 0, 1}.
+func clampDir(v int) int {
+	switch {
+	case v > 0:
+		return 1
+	case v < 0:
+		return -1
+	default:
+		return 0
 	}
 }

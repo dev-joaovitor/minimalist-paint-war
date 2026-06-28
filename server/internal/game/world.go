@@ -110,6 +110,23 @@ func (w *World) SetInput(id string, in Input) {
 	}
 }
 
+// RemovePlayer drops a player from the simulation (e.g. on disconnect).
+func (w *World) RemovePlayer(id string) {
+	if _, ok := w.Players[id]; !ok {
+		return
+	}
+	delete(w.Players, id)
+	for i, pid := range w.order {
+		if pid == id {
+			w.order = append(w.order[:i], w.order[i+1:]...)
+			break
+		}
+	}
+}
+
+// EndsAtMs returns the match end time in unix milliseconds.
+func (w *World) EndsAtMs() int64 { return w.endsAtMs }
+
 // baseFor returns the spawn rectangle for a team.
 func (w *World) baseFor(t model.Team) Rect {
 	if t == model.TeamGreen {

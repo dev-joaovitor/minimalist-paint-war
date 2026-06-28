@@ -18,7 +18,7 @@ import (
 func main() {
 	cfg := config.Load()
 
-	reg := hub.New()
+	reg := hub.New(int64(cfg.MatchDurationMs))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

@@ -32,9 +32,10 @@ const (
 
 // Error codes.
 const (
-	ErrInvalidUsername = "INVALID_USERNAME"
-	ErrUsernameInUse   = "USERNAME_IN_USE"
-	ErrNotLeader       = "NOT_LEADER"
+	ErrInvalidUsername  = "INVALID_USERNAME"
+	ErrUsernameInUse    = "USERNAME_IN_USE"
+	ErrNotLeader        = "NOT_LEADER"
+	ErrNotEnoughPlayers = "NOT_ENOUGH_PLAYERS"
 )
 
 // JoinData is the payload of a join message.
