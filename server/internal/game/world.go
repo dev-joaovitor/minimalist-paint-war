@@ -35,9 +35,10 @@ type Projectile struct {
 
 // Flag is a static capture point; Team is its current owner (TeamNone = neutral).
 type Flag struct {
-	ID   int
-	X, Y float64
-	Team model.Team
+	ID   int        `json:"id"`
+	X    float64    `json:"x"`
+	Y    float64    `json:"y"`
+	Team model.Team `json:"team"`
 }
 
 // MapData is the static geometry produced by mapgen and frozen for a match.
