@@ -7,12 +7,14 @@
 	let showButton = $state(false);
 
 	/** @param {string} t */
-	function title(t) {
-		return t.charAt(0) + t.slice(1).toLowerCase();
+	function teamName(t) {
+		if (t === 'RED') return 'Vermelho';
+		if (t === 'GREEN') return 'Verde';
+		return t;
 	}
 
 	const winnerText = $derived(
-		!sb ? '' : sb.winner === 'DRAW' ? "It's a draw!" : `${title(sb.winner)} Won!`
+		!sb ? '' : sb.winner === 'DRAW' ? 'Empate!' : `${teamName(sb.winner)} Venceu!`
 	);
 	const winnerColor = $derived(sb && sb.winner !== 'DRAW' ? teamColor(sb.winner) : '#fff');
 
@@ -31,9 +33,9 @@
 		<p class="score">{sb.scoreText}</p>
 		<h1 style:color={winnerColor}>{winnerText}</h1>
 		{#if showButton}
-			<button onclick={back}>Back to Lobby</button>
+			<button onclick={back}>Voltar à Sala</button>
 		{:else}
-			<p class="wait">Returning soon…</p>
+			<p class="wait">Retornando em breve…</p>
 		{/if}
 	{/if}
 </div>

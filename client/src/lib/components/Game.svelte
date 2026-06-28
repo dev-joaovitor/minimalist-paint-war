@@ -34,7 +34,7 @@
 	></canvas>
 	<Hud {spectator} />
 	{#if spectator}
-		<div class="spec-banner">Spectating — wait for the next match</div>
+		<div class="spec-banner">Assistindo — aguarde a próxima partida</div>
 	{/if}
 </div>
 

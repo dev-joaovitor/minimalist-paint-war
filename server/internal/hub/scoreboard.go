@@ -62,7 +62,7 @@ func scoreboardFrom(r model.MatchResult) scoreboardData {
 	sb := scoreboardData{
 		Score:     scorePair{Red: r.Red, Green: r.Green},
 		Winner:    winner,
-		ScoreText: fmt.Sprintf("Red %d x %d Green", r.Red, r.Green),
+		ScoreText: fmt.Sprintf("Vermelho %d x %d Verde", r.Red, r.Green),
 	}
 	for _, p := range r.Players {
 		sb.PerPlayer = append(sb.PerPlayer, playerResult{

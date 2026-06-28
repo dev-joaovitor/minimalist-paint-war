@@ -14,20 +14,20 @@
 <div class="screen">
 	<div class="panel">
 		<header>
-			<h1>Lobby</h1>
-			<button class="leave" onclick={disconnect}>Leave</button>
+			<h1>Sala</h1>
+			<button class="leave" onclick={disconnect}>Sair</button>
 		</header>
 
 		<div class="grid">
 			<div class="players">
-				<h3>Players ({players.length})</h3>
+				<h3>Jogadores ({players.length})</h3>
 				<ul>
 					{#each players as p (p.id)}
 						<li>
 							<span class="dot" style:background={teamColor(p.team)}></span>
 							<span class="name">{p.username}</span>
-							{#if p.id === game.lobby.leaderId}<span class="badge">leader</span>{/if}
-							{#if p.id === game.me.id}<span class="you">you</span>{/if}
+							{#if p.id === game.lobby.leaderId}<span class="badge">líder</span>{/if}
+							{#if p.id === game.me.id}<span class="you">você</span>{/if}
 						</li>
 					{/each}
 				</ul>
@@ -37,10 +37,10 @@
 
 		<footer>
 			{#if game.isLeader}
-				<button class="start" onclick={start} disabled={!canStart}>Start Game</button>
-				{#if !canStart}<p class="hint">Need at least 2 players to start.</p>{/if}
+				<button class="start" onclick={start} disabled={!canStart}>Iniciar</button>
+				{#if !canStart}<p class="hint">São necessários ao menos 2 jogadores.</p>{/if}
 			{:else}
-				<p class="hint">Waiting for the leader to start…</p>
+				<p class="hint">Aguardando o líder iniciar…</p>
 			{/if}
 			{#if game.error}<p class="error">{game.error.message}</p>{/if}
 		</footer>

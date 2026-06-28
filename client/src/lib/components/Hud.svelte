@@ -26,7 +26,7 @@
 
 {#if !spectator}
 	<div class="lives">
-		<span class="label">Lives</span>
+		<span class="label">Vidas</span>
 		{#each [0, 1, 2] as i (i)}
 			<span class="hp" class:on={me && me.hp > i}></span>
 		{/each}

@@ -223,14 +223,14 @@ func (h *Hub) handleMessage(c *ws.Client, env ws.Envelope) {
 
 func (h *Hub) handleStartGame(c *ws.Client) {
 	if h.leaderID() != c.ID {
-		c.SendMsg(ws.TypeError, ws.ErrorData{Code: ws.ErrNotLeader, Message: "only the leader can start"})
+		c.SendMsg(ws.TypeError, ws.ErrorData{Code: ws.ErrNotLeader, Message: "apenas o líder pode iniciar"})
 		return
 	}
 	if h.state != model.StateLobby {
 		return
 	}
 	if h.lobbyPlayerCount() < minPlayers {
-		c.SendMsg(ws.TypeError, ws.ErrorData{Code: ws.ErrNotEnoughPlayers, Message: "need at least 2 players"})
+		c.SendMsg(ws.TypeError, ws.ErrorData{Code: ws.ErrNotEnoughPlayers, Message: "são necessários ao menos 2 jogadores"})
 		return
 	}
 	h.startMatch()

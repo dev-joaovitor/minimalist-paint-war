@@ -59,7 +59,7 @@ func NewHandler(reg Registrar) http.HandlerFunc {
 
 		var env Envelope
 		if json.Unmarshal(data, &env) != nil || env.Type != TypeJoin {
-			writeSync(parent, conn, TypeError, ErrorData{ErrInvalidUsername, "expected join message"})
+			writeSync(parent, conn, TypeError, ErrorData{ErrInvalidUsername, "mensagem de entrada esperada"})
 			_ = conn.Close(websocket.StatusPolicyViolation, "bad handshake")
 			return
 		}
@@ -67,14 +67,14 @@ func NewHandler(reg Registrar) http.HandlerFunc {
 		var jd JoinData
 		_ = json.Unmarshal(env.Data, &jd)
 		if !validUsername(jd.Username) {
-			writeSync(parent, conn, TypeError, ErrorData{ErrInvalidUsername, "username must be 3-16 lowercase letters"})
+			writeSync(parent, conn, TypeError, ErrorData{ErrInvalidUsername, "o usuário deve ter de 3 a 16 letras minúsculas"})
 			_ = conn.Close(websocket.StatusPolicyViolation, "invalid username")
 			return
 		}
 
 		client := newClient(parent, conn, jd.Username)
 		if err := reg.Register(client); err != nil {
-			writeSync(parent, conn, TypeError, ErrorData{ErrUsernameInUse, "username is already connected"})
+			writeSync(parent, conn, TypeError, ErrorData{ErrUsernameInUse, "este usuário já está conectado"})
 			_ = conn.Close(websocket.StatusPolicyViolation, "username in use")
 			return
 		}

@@ -29,7 +29,7 @@
 {:else if screen === 'scoreboard'}
 	<Scoreboard />
 {:else}
-	<div class="loading">Loading…</div>
+	<div class="loading">Carregando…</div>
 {/if}
 
 <style>

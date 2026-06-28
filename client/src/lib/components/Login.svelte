@@ -19,16 +19,16 @@
 		<form onsubmit={submit}>
 			<input
 				type="text"
-				placeholder="username"
+				placeholder="usuário"
 				bind:value={username}
 				autocomplete="off"
 				autocapitalize="none"
 				spellcheck="false"
 				maxlength="16"
 			/>
-			<p class="hint">3–16 lowercase letters only (a–z).</p>
+			<p class="hint">3 a 16 letras minúsculas (a–z).</p>
 			<button type="submit" disabled={!valid || connecting}>
-				{connecting ? 'Connecting…' : 'Enter'}
+				{connecting ? 'Conectando…' : 'Entrar'}
 			</button>
 		</form>
 		{#if game.error}

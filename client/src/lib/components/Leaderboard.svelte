@@ -4,13 +4,13 @@
 </script>
 
 <div class="board">
-	<h3>Leaderboard</h3>
+	<h3>Ranking</h3>
 	{#if rows.length === 0}
-		<p class="empty">No games played yet.</p>
+		<p class="empty">Nenhuma partida jogada ainda.</p>
 	{:else}
 		<table>
 			<thead>
-				<tr><th>#</th><th>Player</th><th>W</th><th>L</th></tr>
+				<tr><th>#</th><th>Jogador</th><th>V</th><th>D</th></tr>
 			</thead>
 			<tbody>
 				{#each rows as r, i (r.username)}
