@@ -17,6 +17,9 @@ const (
 	flagClear   = 34.0 // open space required around a flag
 	maxTries    = 80
 	lProbPct    = 35 // percent chance an obstacle is an L-shape
+
+	barThick = 20.0  // uniform obstacle thickness
+	barLen   = 110.0 // uniform obstacle length (never a square)
 )
 
 // Generate builds a deterministic map for the given seed.
@@ -81,10 +84,13 @@ func tryPlaceObstacle(rng *rand.Rand, reserved []game.Rect) []game.Rect {
 	return nil
 }
 
-// randomBar makes a single random rectangle within the playable bounds.
+// randomBar makes a uniform elongated bar (never a square) in a random
+// orientation within the playable bounds.
 func randomBar(rng *rand.Rand) game.Rect {
-	w := 30 + rng.Float64()*150
-	h := 20 + rng.Float64()*130
+	w, h := barLen, barThick
+	if rng.Intn(2) == 0 {
+		w, h = barThick, barLen // vertical
+	}
 	return game.Rect{
 		X: edgeMargin + rng.Float64()*(game.WorldW-2*edgeMargin-w),
 		Y: edgeMargin + rng.Float64()*(game.WorldH-2*edgeMargin-h),
@@ -93,16 +99,31 @@ func randomBar(rng *rand.Rand) game.Rect {
 	}
 }
 
-// randomL makes an L-shape from two rectangles sharing a corner.
+// randomL makes an L-shape from two uniform arms sharing a corner. The corner it
+// points to is randomized for variety. The arms only share an edge (no area
+// overlap), so all obstacles remain pairwise non-overlapping.
 func randomL(rng *rand.Rand) []game.Rect {
-	thick := 24 + rng.Float64()*16
-	long := 90 + rng.Float64()*90
-	x := edgeMargin + rng.Float64()*(game.WorldW-2*edgeMargin-long)
-	y := edgeMargin + rng.Float64()*(game.WorldH-2*edgeMargin-long)
-	// The two arms only share an edge (no area overlap), so the L still reads as
-	// one shape while keeping all obstacles pairwise non-overlapping.
-	horizontal := game.Rect{X: x, Y: y, W: long, H: thick}
-	vertical := game.Rect{X: x, Y: y + thick, W: thick, H: long - thick}
+	x := edgeMargin + rng.Float64()*(game.WorldW-2*edgeMargin-barLen)
+	y := edgeMargin + rng.Float64()*(game.WorldH-2*edgeMargin-barLen)
+	horizontal := game.Rect{X: x, Y: y, W: barLen, H: barThick}
+	vertical := game.Rect{X: x, Y: y, W: barThick, H: barLen}
+
+	switch rng.Intn(4) {
+	case 0: // corner top-left (default): horizontal on top, vertical on left
+		vertical.Y = y + barThick
+		vertical.H = barLen - barThick
+	case 1: // top-right: vertical on the right
+		vertical.X = x + barLen - barThick
+		vertical.Y = y + barThick
+		vertical.H = barLen - barThick
+	case 2: // bottom-left: horizontal on the bottom
+		horizontal.Y = y + barLen - barThick
+		vertical.H = barLen - barThick
+	default: // bottom-right
+		horizontal.Y = y + barLen - barThick
+		vertical.X = x + barLen - barThick
+		vertical.H = barLen - barThick
+	}
 	return []game.Rect{horizontal, vertical}
 }
 

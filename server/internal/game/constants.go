@@ -32,7 +32,7 @@ const (
 const (
 	NumFlags     = 5  // odd to reduce ties
 	NumObstacles = 12 // upper bound; mapgen may place fewer
-	FlagHitR     = 14.0
+	FlagHitR     = 16.0
 )
 
 // s is sin/cos of 45deg, used for diagonal unit vectors.
