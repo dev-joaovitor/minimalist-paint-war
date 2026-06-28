@@ -31,9 +31,10 @@ type Hub struct {
 	members    []*member          // ordered by join time; members[0] is the leader
 	byUsername map[string]*member // active usernames -> member
 
-	world  *game.World
-	curMap game.MapData
-	endsAt int64
+	world   *game.World
+	curMap  game.MapData
+	endsAt  int64
+	pending model.MatchResult // last finished match, awaiting persistence (M7)
 
 	leaderboard []ws.LeaderEntry // cached; populated in milestone 7
 }
@@ -141,6 +142,13 @@ func (h *Hub) handleUnregister(c *ws.Client) {
 		h.world.RemovePlayer(c.ID)
 	}
 
+	// Empty room: reset to a clean lobby so the next joiner starts fresh.
+	if len(h.members) == 0 {
+		h.state = model.StateLobby
+		h.world = nil
+		return
+	}
+
 	// Promote a new leader if needed.
 	if newLeader := h.leaderID(); newLeader != "" && newLeader != prevLeader {
 		h.members[0].client.SendMsg(ws.TypeYouAreLeader, nil)
@@ -159,6 +167,11 @@ func (h *Hub) handleMessage(c *ws.Client, env ws.Envelope) {
 
 	case ws.TypeStartGame:
 		h.handleStartGame(c)
+
+	case ws.TypeReturnToLobby:
+		if h.state == model.StateScoreboard {
+			h.backToLobby()
+		}
 
 	case ws.TypeInput:
 		if h.state != model.StatePlaying || h.world == nil {
@@ -217,9 +230,18 @@ func (h *Hub) startMatch() {
 	h.broadcastMsg(ws.TypeMatchStart, matchStartData{Map: h.curMap, EndsAt: h.endsAt})
 }
 
-// endMatch returns to the lobby. Milestone 6 inserts the scoreboard phase and
-// persistence ahead of this.
-func (h *Hub) endMatch() {
+// finishMatch transitions PLAYING -> SCOREBOARD: it tallies the result, freezes
+// it for persistence (M7), and broadcasts the scoreboard. Roles stay frozen
+// until return_to_lobby so spectators are only re-pooled at the lobby.
+func (h *Hub) finishMatch() {
+	h.pending = h.buildMatchResult()
+	h.state = model.StateScoreboard
+	h.world = nil
+	h.broadcastMsg(ws.TypeScoreboard, scoreboardFrom(h.pending))
+}
+
+// backToLobby transitions SCOREBOARD -> LOBBY, re-pooling spectators onto teams.
+func (h *Hub) backToLobby() {
 	h.state = model.StateLobby
 	h.world = nil
 	for _, m := range h.members {
@@ -236,7 +258,7 @@ func (h *Hub) tick() {
 	now := nowMs()
 	h.world.Step(now)
 	if h.world.Ended(now) {
-		h.endMatch()
+		h.finishMatch()
 		return
 	}
 	h.broadcastMsg(ws.TypeState, h.world.Snapshot(now))

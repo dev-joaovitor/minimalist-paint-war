@@ -20,6 +20,23 @@ const (
 	RoleSpectator   Role = "SPECTATOR"
 )
 
+// PlayerResult is one player's outcome in a finished match.
+type PlayerResult struct {
+	Username string
+	Team     Team
+	Result   string // "win", "loss", or "draw"
+}
+
+// MatchResult summarizes a finished match for the scoreboard and persistence.
+type MatchResult struct {
+	Seed       int64
+	Red        int
+	Green      int
+	Winner     Team // TeamNone means a draw
+	DurationMs int64
+	Players    []PlayerResult
+}
+
 // RoomState is the room's lifecycle phase.
 type RoomState string
 

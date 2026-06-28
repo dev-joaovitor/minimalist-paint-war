@@ -43,9 +43,11 @@ func TestBalanceTeamsAlternates(t *testing.T) {
 
 // --- integration helpers ---
 
-func startHub(t *testing.T) string {
+func startHub(t *testing.T) string { return startHubMs(t, 120000) }
+
+func startHubMs(t *testing.T, matchMs int64) string {
 	t.Helper()
-	h := New(120000)
+	h := New(matchMs)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", ws.NewHandler(h))
 	srv := httptest.NewServer(mux)
