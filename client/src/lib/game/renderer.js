@@ -82,17 +82,17 @@ function drawBase(ctx, base, color) {
  */
 function drawFlag(ctx, x, y, color) {
 	ctx.strokeStyle = '#cfcfcf';
-	ctx.lineWidth = 2;
+	ctx.lineWidth = 3;
 	ctx.beginPath();
-	ctx.moveTo(x, y - 15);
-	ctx.lineTo(x, y + 12);
+	ctx.moveTo(x, y - 22);
+	ctx.lineTo(x, y + 14);
 	ctx.stroke();
 
 	ctx.fillStyle = color;
 	ctx.beginPath();
-	ctx.moveTo(x, y - 15);
-	ctx.lineTo(x + 16, y - 10);
-	ctx.lineTo(x, y - 5);
+	ctx.moveTo(x, y - 22);
+	ctx.lineTo(x + 22, y - 14);
+	ctx.lineTo(x, y - 6);
 	ctx.closePath();
 	ctx.fill();
 }
