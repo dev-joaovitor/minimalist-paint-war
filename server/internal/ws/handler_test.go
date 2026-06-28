@@ -40,7 +40,7 @@ func dialAndJoin(t *testing.T, url, username string) Envelope {
 	}
 	t.Cleanup(func() { _ = c.CloseNow() })
 
-	join, _ := encode(TypeJoin, JoinData{Username: username})
+	join, _ := Encode(TypeJoin, JoinData{Username: username})
 	if err := c.Write(ctx, websocket.MessageText, join); err != nil {
 		t.Fatalf("write join: %v", err)
 	}

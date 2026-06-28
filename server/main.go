@@ -11,13 +11,14 @@ import (
 	"time"
 
 	"paintwar/server/internal/config"
+	"paintwar/server/internal/hub"
 	"paintwar/server/internal/ws"
 )
 
 func main() {
 	cfg := config.Load()
 
-	reg := ws.NewMemRegistry()
+	reg := hub.New()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

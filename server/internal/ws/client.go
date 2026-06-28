@@ -57,7 +57,7 @@ func (c *Client) Send(msg []byte) {
 
 // SendMsg encodes a typed payload and queues it.
 func (c *Client) SendMsg(msgType string, data any) {
-	b, err := encode(msgType, data)
+	b, err := Encode(msgType, data)
 	if err != nil {
 		return
 	}

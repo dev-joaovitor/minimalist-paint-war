@@ -68,8 +68,31 @@ type ErrorData struct {
 	Message string `json:"message"`
 }
 
-// encode marshals a typed payload into an Envelope's JSON bytes.
-func encode(msgType string, data any) ([]byte, error) {
+// LobbyPlayer is one roster entry in lobby_state.
+type LobbyPlayer struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Team     string `json:"team"`
+	Role     string `json:"role"`
+}
+
+// LeaderEntry is one leaderboard row.
+type LeaderEntry struct {
+	Username string `json:"username"`
+	Wins     int    `json:"wins"`
+	Losses   int    `json:"losses"`
+}
+
+// LobbyStateData is broadcast whenever the lobby roster or leader changes.
+// Clients identify themselves by matching their own id (from the joined ack).
+type LobbyStateData struct {
+	LeaderID    string        `json:"leaderId"`
+	Players     []LobbyPlayer `json:"players"`
+	Leaderboard []LeaderEntry `json:"leaderboard"`
+}
+
+// Encode marshals a typed payload into an Envelope's JSON bytes.
+func Encode(msgType string, data any) ([]byte, error) {
 	var raw json.RawMessage
 	if data != nil {
 		b, err := json.Marshal(data)

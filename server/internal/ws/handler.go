@@ -87,7 +87,7 @@ func NewHandler(reg Registrar) http.HandlerFunc {
 
 // writeSync writes a single message synchronously (used before pumps start).
 func writeSync(ctx context.Context, conn *websocket.Conn, msgType string, data any) {
-	b, err := encode(msgType, data)
+	b, err := Encode(msgType, data)
 	if err != nil {
 		return
 	}
