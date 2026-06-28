@@ -24,6 +24,12 @@ type messageCmd struct {
 	env    ws.Envelope
 }
 
-func (registerCmd) isCommand()   {}
-func (unregisterCmd) isCommand() {}
-func (messageCmd) isCommand()    {}
+// leaderboardCmd updates the cached leaderboard from the persistence worker.
+type leaderboardCmd struct {
+	entries []ws.LeaderEntry
+}
+
+func (registerCmd) isCommand()    {}
+func (unregisterCmd) isCommand()  {}
+func (messageCmd) isCommand()     {}
+func (leaderboardCmd) isCommand() {}

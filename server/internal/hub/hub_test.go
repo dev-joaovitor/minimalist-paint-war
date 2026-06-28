@@ -47,7 +47,7 @@ func startHub(t *testing.T) string { return startHubMs(t, 120000) }
 
 func startHubMs(t *testing.T, matchMs int64) string {
 	t.Helper()
-	h := New(matchMs)
+	h := New(matchMs, nil)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", ws.NewHandler(h))
 	srv := httptest.NewServer(mux)

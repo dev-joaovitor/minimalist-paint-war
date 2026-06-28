@@ -13,6 +13,13 @@ import (
 
 const commandBuffer = 256
 
+// Persister records players and match results asynchronously. Calls must not
+// block the hub goroutine. A nil Persister disables persistence.
+type Persister interface {
+	UpsertPlayer(username string)
+	SaveMatch(r model.MatchResult)
+}
+
 // member is a connected client plus its room role and team.
 type member struct {
 	client *ws.Client
@@ -24,8 +31,9 @@ type member struct {
 // and mutates its fields; everything else communicates via the commands channel
 // or the tick timer. It implements ws.Registrar.
 type Hub struct {
-	commands chan command
-	matchMs  int64
+	commands  chan command
+	matchMs   int64
+	persister Persister
 
 	state      model.RoomState
 	members    []*member          // ordered by join time; members[0] is the leader
@@ -39,11 +47,13 @@ type Hub struct {
 	leaderboard []ws.LeaderEntry // cached; populated in milestone 7
 }
 
-// New creates a hub in the LOBBY state and starts its goroutine.
-func New(matchMs int64) *Hub {
+// New creates a hub in the LOBBY state and starts its goroutine. persister may
+// be nil to run without a database.
+func New(matchMs int64, persister Persister) *Hub {
 	h := &Hub{
 		commands:   make(chan command, commandBuffer),
 		matchMs:    matchMs,
+		persister:  persister,
 		state:      model.StateLobby,
 		byUsername: make(map[string]*member),
 	}
@@ -65,6 +75,11 @@ func (h *Hub) run() {
 				h.handleUnregister(c.client)
 			case messageCmd:
 				h.handleMessage(c.client, c.env)
+			case leaderboardCmd:
+				h.leaderboard = c.entries
+				if h.state == model.StateLobby {
+					h.broadcastLobbyState()
+				}
 			}
 		case <-ticker.C:
 			h.tick()
@@ -88,6 +103,17 @@ func (h *Hub) HandleMessage(c *ws.Client, env ws.Envelope) {
 	h.commands <- messageCmd{client: c, env: env}
 }
 
+// UpdateLeaderboard is called by the persistence worker (off the hub goroutine)
+// to publish a refreshed leaderboard. It maps domain rows to wire rows and hands
+// off to the hub goroutine.
+func (h *Hub) UpdateLeaderboard(entries []model.LeaderEntry) {
+	wire := make([]ws.LeaderEntry, 0, len(entries))
+	for _, e := range entries {
+		wire = append(wire, ws.LeaderEntry{Username: e.Username, Wins: e.Wins, Losses: e.Losses})
+	}
+	h.commands <- leaderboardCmd{entries: wire}
+}
+
 // --- command handlers (hub goroutine only) ---
 
 func (h *Hub) handleRegister(c *ws.Client) error {
@@ -104,6 +130,10 @@ func (h *Hub) handleRegister(c *ws.Client) error {
 	m := &member{client: c, role: role}
 	h.members = append(h.members, m)
 	h.byUsername[c.Username] = m
+
+	if h.persister != nil {
+		h.persister.UpsertPlayer(c.Username)
+	}
 
 	c.SendMsg(ws.TypeJoined, ws.JoinedData{
 		UserID: c.ID, Username: c.Username, Role: string(role), Team: string(m.team),
@@ -235,6 +265,9 @@ func (h *Hub) startMatch() {
 // until return_to_lobby so spectators are only re-pooled at the lobby.
 func (h *Hub) finishMatch() {
 	h.pending = h.buildMatchResult()
+	if h.persister != nil {
+		h.persister.SaveMatch(h.pending)
+	}
 	h.state = model.StateScoreboard
 	h.world = nil
 	h.broadcastMsg(ws.TypeScoreboard, scoreboardFrom(h.pending))

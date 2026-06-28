@@ -37,6 +37,13 @@ type MatchResult struct {
 	Players    []PlayerResult
 }
 
+// LeaderEntry is one leaderboard row (ranked by wins desc, losses asc).
+type LeaderEntry struct {
+	Username string
+	Wins     int
+	Losses   int
+}
+
 // RoomState is the room's lifecycle phase.
 type RoomState string
 
