@@ -9,13 +9,15 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"paintwar/server/internal/config"
+	"paintwar/server/internal/ws"
 )
 
 func main() {
-	port := os.Getenv("APP_PORT")
-	if port == "" {
-		port = "8080"
-	}
+	cfg := config.Load()
+
+	reg := ws.NewMemRegistry()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -23,14 +25,15 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+	mux.HandleFunc("/ws", ws.NewHandler(reg))
 
 	srv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + cfg.Port,
 		Handler: mux,
 	}
 
 	go func() {
-		log.Printf("server listening on :%s", port)
+		log.Printf("server listening on :%s", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("server error: %v", err)
 		}
