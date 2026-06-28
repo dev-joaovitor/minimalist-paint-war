@@ -13,7 +13,7 @@ const (
 	baseW       = 150.0 // team base size
 	baseH       = 150.0
 	spawnClear  = 36.0 // reserved breathing room around each base
-	obstacleGap = 22.0 // minimum gap between obstacles (so players fit through)
+	obstacleGap = 2*game.PlayerHalf + 18 // = 44; wider than a player so corridors stay passable
 	flagClear   = 34.0 // open space required around a flag
 	maxTries    = 80
 	lProbPct    = 35 // percent chance an obstacle is an L-shape
