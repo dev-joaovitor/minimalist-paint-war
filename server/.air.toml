@@ -1,10 +1,13 @@
 root = "."
-tmp_dir = "tmp"
+# Build into /tmp (writable by the container's appuser). The project root is a
+# bind mount owned by the host user, so the in-container appuser cannot write a
+# binary there.
+tmp_dir = "/tmp/air"
 
 [build]
-  cmd = "go build -o ./main ."
-  bin = "./main"
-  full_bin = "./main"
+  cmd = "go build -o /tmp/air/main ."
+  bin = "/tmp/air/main"
+  full_bin = "/tmp/air/main"
   include_ext = ["go"]
   exclude_dir = ["tmp", "internal/db/migrations"]
   delay = 200
