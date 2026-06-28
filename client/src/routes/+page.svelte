@@ -3,6 +3,7 @@
 	import Login from '$lib/components/Login.svelte';
 	import Lobby from '$lib/components/Lobby.svelte';
 	import Game from '$lib/components/Game.svelte';
+	import Scoreboard from '$lib/components/Scoreboard.svelte';
 
 	const screen = $derived(
 		game.connection !== 'connected'
@@ -23,6 +24,10 @@
 	<Lobby />
 {:else if screen === 'game'}
 	<Game />
+{:else if screen === 'spectator'}
+	<Game spectator />
+{:else if screen === 'scoreboard'}
+	<Scoreboard />
 {:else}
 	<div class="loading">Loading…</div>
 {/if}
