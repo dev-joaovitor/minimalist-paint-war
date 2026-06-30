@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/coder/websocket"
@@ -35,12 +36,29 @@ func validUsername(s string) bool {
 
 const joinTimeout = 10 * time.Second
 
+// parseOrigins splits a comma-separated origin list into trimmed patterns,
+// defaulting to "*" (allow all) when empty.
+func parseOrigins(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return []string{"*"}
+	}
+	return out
+}
+
 // NewHandler returns an http.HandlerFunc that upgrades to WebSocket, performs
 // the join handshake (username validation + registration), then runs the pumps.
-func NewHandler(reg Registrar) http.HandlerFunc {
+// allowedOrigins is a comma-separated list of origin patterns ("*" allows all).
+func NewHandler(reg Registrar, allowedOrigins string) http.HandlerFunc {
+	origins := parseOrigins(allowedOrigins)
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-			OriginPatterns: []string{"*"},
+			OriginPatterns: origins,
 		})
 		if err != nil {
 			return

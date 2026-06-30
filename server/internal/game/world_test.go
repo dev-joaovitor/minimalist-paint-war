@@ -75,7 +75,8 @@ func TestPlayerDamageDeathRespawn(t *testing.T) {
 	red.Face = 0
 	grn.X, grn.Y = 160, 100
 
-	now := int64(1000)
+	// Damage only lands after the spawn-protection window has elapsed.
+	now := int64(SpawnProtectMs + 1)
 	for i := 0; i < MaxHP; i++ {
 		w.SetInput("red", Input{Shoot: true})
 		w.Step(now)
@@ -99,6 +100,30 @@ func TestPlayerDamageDeathRespawn(t *testing.T) {
 	bx, by := md.GreenBase.Center()
 	if grn.X != bx || grn.Y != by {
 		t.Errorf("expected respawn at base center (%.0f,%.0f), got (%.0f,%.0f)", bx, by, grn.X, grn.Y)
+	}
+}
+
+func TestSpawnProtectionBlocksDamage(t *testing.T) {
+	md := baseMap()
+	w := NewWorld(md, []PlayerSpec{
+		{ID: "red", Team: model.TeamRed},
+		{ID: "grn", Team: model.TeamGreen},
+	}, 0, 120000)
+	red := w.Players["red"]
+	grn := w.Players["grn"]
+	red.X, red.Y = 100, 100
+	red.Face = 0
+	grn.X, grn.Y = 160, 100
+
+	// Within the spawn-protection window: hits are ignored.
+	now := int64(500)
+	for i := 0; i < MaxHP; i++ {
+		w.SetInput("red", Input{Shoot: true})
+		w.Step(now)
+		now += FireCooldownMs
+	}
+	if grn.Dead || grn.HP != MaxHP {
+		t.Fatalf("expected green unharmed while protected, dead=%v hp=%d", grn.Dead, grn.HP)
 	}
 }
 

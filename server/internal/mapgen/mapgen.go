@@ -14,8 +14,8 @@ const (
 	baseH       = 150.0
 	spawnClear  = 36.0 // reserved breathing room around each base
 	obstacleGap = 2*game.PlayerHalf + 18 // = 44; wider than a player so corridors stay passable
-	flagClear   = 34.0 // open space required around a flag
-	maxTries    = 80
+	flagClear   = 75.0 // open space required around a flag; also the min flag-to-flag spacing
+	maxTries    = 160
 	lProbPct    = 35 // percent chance an obstacle is an L-shape
 
 	barThick = 20.0  // uniform obstacle thickness

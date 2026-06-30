@@ -35,6 +35,15 @@
 			<Leaderboard />
 		</div>
 
+		<div class="controls">
+			<h3>Como jogar</h3>
+			<ul>
+				<li><span class="key">WASD</span> ou <span class="key">setas</span> para se mover</li>
+				<li><span class="key">Espaco</span> para atirar</li>
+				<li>Objetivo: capture as bandeiras atirando nelas.</li>
+			</ul>
+		</div>
+
 		<footer>
 			{#if game.isLeader}
 				<button class="start" onclick={start} disabled={!canStart}>Iniciar</button>
@@ -90,6 +99,28 @@
 		background: #383838;
 		border-radius: 8px;
 		padding: 1rem;
+	}
+	.controls {
+		background: #383838;
+		border-radius: 8px;
+		padding: 1rem;
+		margin-top: 1rem;
+	}
+	.controls li {
+		display: block;
+		color: #ccc;
+		font-size: 0.9rem;
+		padding: 0.25rem 0;
+	}
+	.key {
+		display: inline-block;
+		background: #1f1f1f;
+		border: 1px solid #555;
+		border-radius: 4px;
+		padding: 0.05rem 0.4rem;
+		font-family: ui-monospace, monospace;
+		font-size: 0.8rem;
+		color: #fff;
 	}
 	ul {
 		list-style: none;

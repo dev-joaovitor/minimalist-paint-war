@@ -14,6 +14,7 @@ const FACE_DIR = [
 	[0.7071, -0.7071]
 ];
 const PLAYER_HALF = 13;
+const FLAG_HIT_R = 16; // capture radius; mirrors FlagHitR on the server
 
 /**
  * @param {CanvasRenderingContext2D} ctx
@@ -113,6 +114,14 @@ function drawPlayer(ctx, p, meId) {
 		ctx.strokeStyle = '#fff';
 		ctx.lineWidth = 2;
 		ctx.strokeRect(p.x - PLAYER_HALF, p.y - PLAYER_HALF, PLAYER_HALF * 2, PLAYER_HALF * 2);
+	}
+
+	if (p.invuln && !p.dead) {
+		ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.arc(p.x, p.y, PLAYER_HALF + 7, 0, Math.PI * 2);
+		ctx.stroke();
 	}
 
 	if (!p.dead) {

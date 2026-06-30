@@ -45,6 +45,8 @@ services:
       - .env.development
     networks:
       - "paint-war"
+    depends_on:
+      - server
 
   database:
     image: "postgres:16.0-alpine3.18"

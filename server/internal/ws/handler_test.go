@@ -59,7 +59,7 @@ func dialAndJoin(t *testing.T, url, username string) Envelope {
 func newTestServer() *httptest.Server {
 	reg := NewMemRegistry()
 	mux := http.NewServeMux()
-	mux.HandleFunc("/ws", NewHandler(reg))
+	mux.HandleFunc("/ws", NewHandler(reg, "*"))
 	return httptest.NewServer(mux)
 }
 

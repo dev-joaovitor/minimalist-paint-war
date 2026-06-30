@@ -2,8 +2,8 @@ package game
 
 // World dimensions (pixels). Aspect roughly matches the design prototype.
 const (
-	WorldW = 1000.0
-	WorldH = 760.0
+	WorldW = 1400.0
+	WorldH = 1040.0
 )
 
 // Simulation timing.
@@ -18,20 +18,23 @@ const (
 	PlayerHalf  = 13.0  // half of the 26px square
 	MaxHP       = 3
 	RespawnMs   = 3000
+	// SpawnProtectMs is the invulnerability window after (re)spawning, giving
+	// players a moment to move off the base before they can be damaged.
+	SpawnProtectMs = 2000
 )
 
 // Projectile tuning.
 const (
 	ProjSpeed      = 600.0 // px/sec
 	ProjRadius     = 5.0
-	FireCooldownMs = 300
+	FireCooldownMs = 400
 	MuzzleOffset   = PlayerHalf + ProjRadius + 2
 )
 
 // Map composition.
 const (
-	NumFlags     = 5  // odd to reduce ties
-	NumObstacles = 12 // upper bound; mapgen may place fewer
+	NumFlags     = 9  // odd to reduce ties
+	NumObstacles = 16 // upper bound; mapgen may place fewer
 	FlagHitR     = 16.0
 )
 

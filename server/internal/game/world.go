@@ -19,9 +19,10 @@ type Player struct {
 	HP   int
 	Dead bool
 
-	RespawnAt  int64 // ms; valid while Dead
-	lastShotMs int64
-	input      Input
+	RespawnAt   int64 // ms; valid while Dead
+	InvulnUntil int64 // ms; damage is ignored until this time after a spawn
+	lastShotMs  int64
+	input       Input
 }
 
 // Projectile is a straight-line shot owned by a team.
@@ -97,7 +98,7 @@ func NewWorld(md MapData, specs []PlayerSpec, startMs, matchMs int64) *World {
 	}
 	for _, sp := range specs {
 		p := &Player{ID: sp.ID, Team: sp.Team, HP: MaxHP}
-		w.spawn(p)
+		w.spawn(p, startMs)
 		w.Players[sp.ID] = p
 		w.order = append(w.order, sp.ID)
 	}
@@ -136,12 +137,14 @@ func (w *World) baseFor(t model.Team) Rect {
 	return w.RedBase
 }
 
-// spawn places a player at its team base center and resets vitals.
-func (w *World) spawn(p *Player) {
+// spawn places a player at its team base center, resets vitals, and grants a
+// brief spawn-protection window.
+func (w *World) spawn(p *Player, nowMs int64) {
 	cx, cy := w.baseFor(p.Team).Center()
 	p.X, p.Y = cx, cy
 	p.HP = MaxHP
 	p.Dead = false
+	p.InvulnUntil = nowMs + SpawnProtectMs
 	p.input = Input{}
 }
 

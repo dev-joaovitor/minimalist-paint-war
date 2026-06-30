@@ -11,6 +11,7 @@ type Config struct {
 	DatabaseURL     string
 	TickRate        int
 	MatchDurationMs int
+	AllowedOrigins  string // comma-separated WebSocket origin patterns; "*" allows all
 }
 
 // Load reads configuration from environment variables, applying defaults.
@@ -20,6 +21,7 @@ func Load() Config {
 		DatabaseURL:     getenv("DATABASE_URL", ""),
 		TickRate:        getenvInt("TICK_RATE", 20),
 		MatchDurationMs: getenvInt("MATCH_DURATION_MS", 120000),
+		AllowedOrigins:  getenv("ALLOWED_ORIGINS", "*"),
 	}
 }
 

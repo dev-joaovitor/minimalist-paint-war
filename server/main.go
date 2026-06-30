@@ -54,7 +54,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
-	mux.HandleFunc("/ws", ws.NewHandler(h))
+	mux.HandleFunc("/ws", ws.NewHandler(h, cfg.AllowedOrigins))
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 

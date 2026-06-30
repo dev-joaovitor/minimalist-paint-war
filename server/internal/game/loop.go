@@ -149,8 +149,9 @@ func (w *World) advanceProjectiles(nowMs int64) {
 }
 
 // damage applies one hit; at 0 HP the player dies and schedules a respawn.
+// Players are immune while their spawn-protection window is active.
 func (w *World) damage(p *Player, nowMs int64) {
-	if p.Dead {
+	if p.Dead || nowMs < p.InvulnUntil {
 		return
 	}
 	p.HP--
@@ -167,7 +168,7 @@ func (w *World) respawn(nowMs int64) {
 	for _, id := range w.order {
 		p := w.Players[id]
 		if p.Dead && nowMs >= p.RespawnAt {
-			w.spawn(p)
+			w.spawn(p, nowMs)
 		}
 	}
 }

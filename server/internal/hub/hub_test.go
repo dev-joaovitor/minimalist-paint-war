@@ -49,7 +49,7 @@ func startHubMs(t *testing.T, matchMs int64) string {
 	t.Helper()
 	h := New(matchMs, nil)
 	mux := http.NewServeMux()
-	mux.HandleFunc("/ws", ws.NewHandler(h))
+	mux.HandleFunc("/ws", ws.NewHandler(h, "*"))
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws"

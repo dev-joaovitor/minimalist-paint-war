@@ -2,13 +2,14 @@ package game
 
 // PlayerState is a player's per-tick wire representation.
 type PlayerState struct {
-	ID   string  `json:"id"`
-	X    float64 `json:"x"`
-	Y    float64 `json:"y"`
-	Face int     `json:"face"`
-	HP   int     `json:"hp"`
-	Team string  `json:"team"`
-	Dead bool    `json:"dead"`
+	ID     string  `json:"id"`
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Face   int     `json:"face"`
+	HP     int     `json:"hp"`
+	Team   string  `json:"team"`
+	Dead   bool    `json:"dead"`
+	Invuln bool    `json:"invuln"`
 }
 
 // ProjectileState is a projectile's per-tick wire representation.
@@ -51,6 +52,7 @@ func (w *World) Snapshot(nowMs int64) Snapshot {
 		snap.Players = append(snap.Players, PlayerState{
 			ID: p.ID, X: round(p.X), Y: round(p.Y), Face: p.Face,
 			HP: p.HP, Team: string(p.Team), Dead: p.Dead,
+			Invuln: p.InvulnUntil > nowMs,
 		})
 	}
 	for _, pr := range w.Projectiles {

@@ -184,6 +184,13 @@ func (h *Hub) handleUnregister(c *ws.Client) {
 		h.members[0].client.SendMsg(ws.TypeYouAreLeader, nil)
 	}
 
+	// A match needs at least minPlayers active; if a disconnect drops it below
+	// that, abort back to the lobby instead of running a one-player match.
+	if h.state == model.StatePlaying && h.activePlayerCount() < minPlayers {
+		h.abortMatch()
+		return
+	}
+
 	if h.state == model.StateLobby {
 		h.balanceTeams()
 		h.broadcastLobbyState()
@@ -271,6 +278,18 @@ func (h *Hub) finishMatch() {
 	h.state = model.StateScoreboard
 	h.world = nil
 	h.broadcastMsg(ws.TypeScoreboard, scoreboardFrom(h.pending))
+}
+
+// abortMatch ends an in-progress match that no longer has enough players and
+// returns everyone to the lobby. No result is built, persisted, or scored.
+func (h *Hub) abortMatch() {
+	h.state = model.StateLobby
+	h.world = nil
+	for _, m := range h.members {
+		m.role = model.RoleLobbyPlayer
+	}
+	h.balanceTeams()
+	h.broadcastLobbyState()
 }
 
 // backToLobby transitions SCOREBOARD -> LOBBY, re-pooling spectators onto teams.

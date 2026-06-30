@@ -15,3 +15,14 @@ func (h *Hub) lobbyPlayerCount() int {
 	}
 	return n
 }
+
+// activePlayerCount returns how many members are playing the current match.
+func (h *Hub) activePlayerCount() int {
+	n := 0
+	for _, m := range h.members {
+		if m.role == model.RolePlayer {
+			n++
+		}
+	}
+	return n
+}

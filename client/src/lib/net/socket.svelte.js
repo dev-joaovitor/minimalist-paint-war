@@ -5,7 +5,19 @@ import { game, resetMatch, resetSession } from '../stores/game.svelte.js';
 
 /** @typedef {import('../stores/game.svelte.js').GameError} GameError */
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
+// Resolve the WebSocket endpoint: an explicit VITE_WS_URL wins; otherwise derive
+// it from the page origin so a single-origin (reverse-proxied) cloud deploy works
+// without a rebuild. Falls back to the local dev server during SSR.
+function resolveWsUrl() {
+	if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+	if (typeof window !== 'undefined') {
+		const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+		return `${proto}://${window.location.host}/ws`;
+	}
+	return 'ws://localhost:8080/ws';
+}
+
+const WS_URL = resolveWsUrl();
 
 /** @type {WebSocket | null} */
 let ws = null;
