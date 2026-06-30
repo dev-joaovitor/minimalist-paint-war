@@ -1,0 +1,66 @@
+# Production stack for OCI (single VM). Run with:
+#   docker compose -f compose.prod.yaml up -d --build
+#
+# Differs from the dev compose.yaml: no bind mounts, no hot-reload (air/vite),
+# no pgAdmin, and only Caddy publishes host ports. The server and database are
+# reachable only on the internal bridge network.
+
+networks:
+  paint-war:
+    driver: bridge
+
+volumes:
+  paint_war_pg_data:
+  caddy_data:
+  caddy_config:
+
+services:
+  caddy:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.caddy
+      target: production
+    restart: unless-stopped
+    # Caddy resolves {$SITE_ADDRESS} in the Caddyfile from its container env at
+    # startup, so inject it via env_file rather than host-shell interpolation.
+    env_file:
+      - .env.production
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - paint-war
+    depends_on:
+      - server
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    networks:
+      - paint-war
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: "postgres:16-alpine"
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - paint_war_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paint-war

@@ -1,0 +1,28 @@
+# Single-origin reverse proxy for Paint War.
+#
+# SITE_ADDRESS is your public hostname (e.g. you.duckdns.org). Naming a real
+# domain here makes Caddy automatically obtain and renew a Let's Encrypt
+# certificate and redirect HTTP -> HTTPS, so the browser loads over HTTPS and
+# the client can open a wss:// socket on the same origin.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# WebSocket and health endpoints are served by the Go server. reverse_proxy
+	# forwards the Upgrade handshake transparently, so /ws becomes a wss:// tunnel.
+	@ws path /ws*
+	handle @ws {
+		reverse_proxy server:8080
+	}
+
+	handle /healthz {
+		reverse_proxy server:8080
+	}
+
+	# Everything else is the static SvelteKit SPA. try_files falls back to the
+	# single index.html so client-side routing works.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -1,0 +1,29 @@
+# Build the static client and bake it into a Caddy image.
+#
+# The build context is the repo root (see compose.prod.yaml) so we can copy both
+# the client source and the Caddyfile.
+
+# Stage 1: produce the static SvelteKit SPA. VITE_WS_URL is intentionally NOT set
+# here, so the client derives its socket URL from the page origin (wss://host/ws)
+# at runtime -- the build is environment-agnostic.
+FROM node:24-alpine AS client-build
+
+WORKDIR /app
+
+ENV COREPACK_ENABLE_DOWNLOADS=1
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME/bin:$PATH"
+ENV CI=true
+
+COPY client/package*.json client/pnpm-lock.yaml client/pnpm-workspace.yaml* ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+
+COPY client/ ./
+RUN pnpm build
+
+# Stage 2: Caddy serving the static files from /srv.
+FROM caddy:2-alpine AS production
+
+COPY --from=client-build /app/build /srv
+COPY Caddyfile /etc/caddy/Caddyfile

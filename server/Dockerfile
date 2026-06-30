@@ -17,15 +17,31 @@ EXPOSE 8080
 
 CMD ["air"]
 
-# prod
+# build: compile a static, CGO-free binary. Building on the target host (Arm A1)
+# produces a native arm64 binary with no cross-compilation needed.
+FROM golang:1.26.3-alpine3.23 AS build
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup -h /home/appuser
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /main .
+
+# prod: distroless scratch image holding only the binary + passwd/group so it can
+# run as the unprivileged appuser.
 FROM scratch AS production
 
-COPY --from=dev /etc/passwd /etc/passwd
-COPY --from=dev /etc/group /etc/group
+COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /etc/group /etc/group
 
 WORKDIR /
 
-COPY --from=dev --chown=appuser:appgroup /app/main /main
+COPY --from=build --chown=appuser:appgroup /main /main
 
 USER appuser
 
