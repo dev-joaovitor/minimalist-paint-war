@@ -1,0 +1,2 @@
+# Production secrets -- never commit. Use .env.production.example as the template.
+.env.production
